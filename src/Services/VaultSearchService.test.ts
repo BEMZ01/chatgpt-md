@@ -1,11 +1,16 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { jest, describe, it, expect, beforeEach } from "@jest/globals";
+import { jest, describe, it, expect } from "@jest/globals";
 import { VaultSearchService } from "./VaultSearchService";
 import { TFile } from "obsidian";
 
 /** Create a mock TFile for testing */
 function createMockFile(path: string): TFile {
-  return new TFile(path);
+  const parts = path.split("/");
+  const filename = parts[parts.length - 1];
+  const nameParts = filename.split(".");
+  const extension = nameParts.length > 1 ? nameParts.pop()! : "";
+  const basename = nameParts.join(".");
+  return { path, basename, name: filename, extension, stat: { ctime: 0, mtime: 0, size: 0 } } as unknown as TFile;
 }
 
 /** Create a minimal App mock for VaultSearchService tests */
