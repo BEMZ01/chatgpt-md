@@ -137,7 +137,8 @@ export class ToolService {
           args,
           this.settingsService.webSearchProvider,
           this.settingsService.webSearchApiKey,
-          this.settingsService.webSearchApiUrl
+          this.settingsService.webSearchApiUrl,
+          this.settingsService.webSearchQueryTemplate
         );
       },
     });
@@ -154,7 +155,7 @@ export class ToolService {
   /**
    * Check if web search tool is available based on settings
    * - Brave provider: requires API key
-   * - Custom provider: requires API URL
+   * - Custom provider: requires API URL or query template
    *
    * @param settings - Plugin settings containing web search configuration
    * @returns true if web search is properly configured, false otherwise
@@ -164,7 +165,9 @@ export class ToolService {
       return !!settings.webSearchApiKey && settings.webSearchApiKey.trim().length > 0;
     }
     if (settings.webSearchProvider === "custom") {
-      return !!settings.webSearchApiUrl && settings.webSearchApiUrl.trim().length > 0;
+      const hasUrl = !!settings.webSearchApiUrl && settings.webSearchApiUrl.trim().length > 0;
+      const hasTemplate = !!settings.webSearchQueryTemplate && settings.webSearchQueryTemplate.trim().length > 0;
+      return hasUrl || hasTemplate;
     }
     return false;
   }

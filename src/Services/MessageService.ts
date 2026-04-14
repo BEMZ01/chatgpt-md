@@ -11,6 +11,7 @@ import {
   getHeadingPrefix,
 } from "../Utilities/TextHelpers";
 import {
+  findImageEmbedsInMessage,
   findLinksInMessage,
   removeCommentBlocks,
   removeYAMLFrontMatter,
@@ -33,6 +34,14 @@ export class MessageService {
    */
   findLinksInMessage(message: string): { link: string; title: string }[] {
     return findLinksInMessage(message);
+  }
+
+  /**
+   * Find image embeds in a message (both ![[image.png]] and ![alt](image.png) syntax)
+   * Delegates to utility function
+   */
+  findImageEmbedsInMessage(message: string): { embedText: string; title: string }[] {
+    return findImageEmbedsInMessage(message);
   }
 
   /**

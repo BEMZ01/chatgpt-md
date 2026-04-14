@@ -64,6 +64,13 @@ export const NEWLINE = "\n\n";
 export const WIKI_LINKS_REGEX = /\[\[([^\][]+)\]\]/g;
 export const MARKDOWN_LINKS_REGEX = /\[([^\]]+)\]\(([^()]+)\)/g;
 
+// Image embed patterns: ![[image.png]] and ![alt](image.png)
+export const IMAGE_EMBED_WIKI_REGEX = /!\[\[([^\][]+)\]\]/g;
+export const IMAGE_EMBED_MARKDOWN_REGEX = /!\[([^\]]*)\]\(([^()]+)\)/g;
+
+// Supported image file extensions
+export const IMAGE_EXTENSIONS = ["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg", "tiff", "tif", "avif"];
+
 export const COMMENT_BLOCK_START = `=begin-chatgpt-md-comment${NEWLINE}`;
 export const COMMENT_BLOCK_END = `=end-chatgpt-md-comment`;
 

@@ -137,3 +137,25 @@ export interface WebSearchApprovalDecision {
   approved: boolean;
   approvedResults: WebSearchResult[];
 }
+
+/**
+ * An image embed detected in a user message
+ */
+export interface DetectedImage {
+  /** Original embed text, e.g. ![[path.png]] or ![alt](path.png) */
+  embedText: string;
+  /** File title / name used in the embed */
+  title: string;
+  /** Resolved vault path */
+  path: string;
+  /** Index of the message in the messagesWithRole array that contains this embed */
+  messageIndex: number;
+}
+
+/**
+ * User's image approval decision
+ */
+export interface ImageApprovalDecision {
+  approved: boolean;
+  approvedImages: DetectedImage[];
+}
