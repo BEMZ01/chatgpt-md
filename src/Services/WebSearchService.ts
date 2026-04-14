@@ -67,28 +67,43 @@ export class WebSearchService {
    * Supports any custom endpoint that returns:
    * { results: [{ title, url, snippet }] }
    *
+   * When a queryTemplate is provided, it is used to build the request URL by replacing
+   * {{api_key}} and {{search_term}} placeholders. Otherwise, falls back to the default
+   * query string format: <apiUrl>?q=<query>&limit=<limit> with an Authorization header.
+   *
    * @param query - Search query string
    * @param apiUrl - Custom API endpoint URL
    * @param apiKey - Optional API key for authentication
    * @param limit - Maximum number of results (capped at MAX_WEB_RESULTS)
+   * @param queryTemplate - Optional URL template with {{api_key}} and {{search_term}} placeholders
    * @returns Array of web search results
    */
   private async searchCustom(
     query: string,
     apiUrl: string,
     apiKey?: string,
-    limit: number = 5
+    limit: number = 5,
+    queryTemplate?: string
   ): Promise<WebSearchResult[]> {
     try {
-      const url = `${apiUrl}?q=${encodeURIComponent(query)}&limit=${limit}`;
-
+      let url: string;
       const headers: Record<string, string> = {
         Accept: "application/json",
         "Content-Type": "application/json",
       };
 
-      if (apiKey) {
-        headers["Authorization"] = `Bearer ${apiKey}`;
+      if (queryTemplate && queryTemplate.trim()) {
+        // Use the user-defined template: replace placeholders
+        url = queryTemplate
+          .replace(/\{\{api_key\}\}/g, encodeURIComponent(apiKey ?? ""))
+          .replace(/\{\{search_term\}\}/g, encodeURIComponent(query))
+          .replace(/\{\{limit\}\}/g, String(limit));
+      } else {
+        // Default behavior: append query params and use Authorization header
+        url = `${apiUrl}?q=${encodeURIComponent(query)}&limit=${limit}`;
+        if (apiKey) {
+          headers["Authorization"] = `Bearer ${apiKey}`;
+        }
       }
 
       const response = await requestUrl({ url, method: "GET", headers });
@@ -119,13 +134,15 @@ export class WebSearchService {
    * @param provider - Search provider to use
    * @param apiKey - API key for the provider
    * @param customUrl - Custom endpoint URL (for "custom" provider)
+   * @param queryTemplate - Optional URL template for the custom endpoint
    * @returns Array of web search results
    */
   async searchWeb(
     args: { query: string; limit?: number },
     provider: "brave" | "custom",
     apiKey?: string,
-    customUrl?: string
+    customUrl?: string,
+    queryTemplate?: string
   ): Promise<WebSearchResult[]> {
     const { query, limit = 5 } = args;
     const maxLimit = Math.min(limit, MAX_WEB_RESULTS); // Cap at MAX_WEB_RESULTS
@@ -141,11 +158,11 @@ export class WebSearchService {
         return this.searchBrave(query, apiKey, maxLimit);
 
       case "custom":
-        if (!customUrl) {
+        if (!customUrl && !queryTemplate) {
           this.notificationService.showWarning("Custom search requires an API URL. Please configure in settings.");
           return [];
         }
-        return this.searchCustom(query, customUrl, apiKey, maxLimit);
+        return this.searchCustom(query, customUrl ?? "", apiKey, maxLimit, queryTemplate);
 
       default:
         this.notificationService.showWarning("Unknown search provider. Please configure in settings.");

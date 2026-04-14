@@ -460,12 +460,9 @@ export class AiProviderService implements IAiApiService {
     toolService?: ToolService,
     settings?: ChatGPT_MDSettings
   ): Promise<{ fullString: string; mode: string }> {
-    const aiSdkMessages = messages.map((msg) => ({
-      role: msg.role as "user" | "assistant" | "system",
-      content: msg.content,
-    }));
+    const aiSdkMessages = this.prepareAiSdkMessages(messages);
 
-    const request: Parameters<typeof generateText>[0] = {
+    const request: any = {
       model,
       messages: aiSdkMessages,
     };
@@ -474,7 +471,7 @@ export class AiProviderService implements IAiApiService {
     const shouldUseTool = toolsAvailable && settings && this.modelSupportsTools(modelName, settings);
 
     if (shouldUseTool) {
-      request.tools = tools as typeof request.tools;
+      request.tools = tools;
     }
 
     let response;
@@ -489,7 +486,7 @@ export class AiProviderService implements IAiApiService {
       const toolResults = await toolService.handleToolCalls(response.toolCalls, modelName);
       const { contextMessages } = await toolService.processToolResults(response.toolCalls, toolResults, modelName);
 
-      const updatedMessages = [...aiSdkMessages];
+      const updatedMessages: any[] = [...aiSdkMessages];
 
       if (response.text?.trim()) {
         updatedMessages.push({ role: "assistant", content: response.text });
@@ -606,30 +603,53 @@ export class AiProviderService implements IAiApiService {
   }
 
   /**
-   * Prepare messages for AI SDK format
+   * Prepare messages for AI SDK format, including image content parts if present
    */
   private prepareAiSdkMessages(messages: Message[]): Array<{
     role: "user" | "assistant" | "system";
-    content: string;
+    content: string | Array<{ type: "text"; text: string } | { type: "image"; image: Uint8Array; mimeType: string }>;
   }> {
-    return messages.map((msg) => ({
-      role: msg.role as "user" | "assistant" | "system",
-      content: msg.content,
-    }));
+    return messages.map((msg) => {
+      if (msg.images && msg.images.length > 0 && msg.role === "user") {
+        const contentParts: Array<
+          { type: "text"; text: string } | { type: "image"; image: Uint8Array; mimeType: string }
+        > = [];
+
+        if (msg.content.trim()) {
+          contentParts.push({ type: "text", text: msg.content });
+        }
+
+        for (const img of msg.images) {
+          contentParts.push({ type: "image", image: img.data, mimeType: img.mimeType });
+        }
+
+        return {
+          role: msg.role as "user",
+          content: contentParts,
+        };
+      }
+
+      return {
+        role: msg.role as "user" | "assistant" | "system",
+        content: msg.content,
+      };
+    });
   }
 
   /**
    * Build stream request with optional tools
    */
+
   private buildStreamRequest(
     model: LanguageModel,
-    messages: Array<{ role: "user" | "assistant" | "system"; content: string }>,
+
+    messages: any[],
     abortSignal: AbortSignal,
     tools: unknown,
     modelName: string,
     settings?: ChatGPT_MDSettings
-  ): Parameters<typeof streamText>[0] {
-    const request: Parameters<typeof streamText>[0] = {
+  ): any {
+    const request: any = {
       model,
       messages,
       abortSignal,
@@ -639,7 +659,7 @@ export class AiProviderService implements IAiApiService {
     const shouldUseTool = toolsAvailable && settings && this.modelSupportsTools(modelName, settings);
 
     if (shouldUseTool) {
-      request.tools = tools as typeof request.tools;
+      request.tools = tools;
     }
 
     return request;
@@ -687,7 +707,8 @@ export class AiProviderService implements IAiApiService {
     handler: StreamingHandler,
     editor: Editor,
     model: LanguageModel,
-    aiSdkMessages: Array<{ role: "user" | "assistant" | "system"; content: string }>,
+
+    aiSdkMessages: any[],
     toolService: ToolService,
     modelName: string
   ): Promise<string> {
@@ -717,11 +738,12 @@ export class AiProviderService implements IAiApiService {
    */
   private async streamContinuation(
     model: LanguageModel,
-    messages: Array<{ role: "user" | "assistant" | "system"; content: string }>,
+
+    messages: any[],
     handler: StreamingHandler,
     initialText: string
   ): Promise<string> {
-    const continuationResult = streamText({ model, messages });
+    const continuationResult = streamText({ model, messages } as any);
 
     const continuationCursor = handler.getCursor();
     handler.reset(continuationCursor);

@@ -92,6 +92,25 @@ export class FileService {
   }
 
   /**
+   * Read an image file from the vault as a Uint8Array
+   * @param linkPath - The path or title used in the embed (e.g. "image.png" or "folder/image.png")
+   * @returns Uint8Array of the image data, or null if not found
+   */
+  async readImageFileAsUint8Array(linkPath: string): Promise<{ data: Uint8Array; path: string } | null> {
+    try {
+      const file = this.app.metadataCache.getFirstLinkpathDest(linkPath, "");
+      if (!file) {
+        return null;
+      }
+      const buffer = await this.app.vault.readBinary(file);
+      return { data: new Uint8Array(buffer), path: file.path };
+    } catch (error) {
+      console.error(`Error reading image file: ${linkPath}`, error);
+      return null;
+    }
+  }
+
+  /**
    * Format a date according to the given format
    */
   formatDate(date: Date, format: string): string {

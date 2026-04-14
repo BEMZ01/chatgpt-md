@@ -209,6 +209,13 @@ export interface WebSearchSettings {
   webSearchApiKey?: string;
   /** Custom search API endpoint */
   webSearchApiUrl?: string;
+  /**
+   * URL template for the custom search endpoint.
+   * Supports {{api_key}} and {{search_term}} placeholders.
+   * Example: https://api.serpstack.com/search?access_key={{api_key}}&query={{search_term}}
+   * When empty, defaults to: <webSearchApiUrl>?q=<encoded_query>&limit=<limit>
+   */
+  webSearchQueryTemplate?: string;
   /** Maximum results to return */
   maxWebSearchResults: number;
 }
@@ -296,6 +303,7 @@ export const DEFAULT_SETTINGS: ChatGPT_MDSettings = {
   webSearchProvider: "brave",
   webSearchApiKey: "",
   webSearchApiUrl: "",
+  webSearchQueryTemplate: "",
   maxWebSearchResults: 5,
 
   // Formatting

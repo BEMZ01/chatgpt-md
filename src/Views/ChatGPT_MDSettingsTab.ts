@@ -459,6 +459,17 @@ export class ChatGPT_MDSettingsTab extends PluginSettingTab {
         group: "Tool Calling",
       },
       {
+        id: "webSearchQueryTemplate",
+        name: "Custom Search Query Template",
+        description:
+          "Optional URL template for the custom search request. Use {{api_key}} and {{search_term}} as placeholders. " +
+          "Example: https://api.serpstack.com/search?access_key={{api_key}}&query={{search_term}}\n" +
+          "When empty, defaults to: <URL>?q=<query>&limit=<limit> with an Authorization header.",
+        type: "text",
+        placeholder: "https://api.example.com/search?key={{api_key}}&q={{search_term}}",
+        group: "Tool Calling",
+      },
+      {
         id: "maxWebSearchResults",
         name: "Max Web Search Results",
         description: "Maximum number of search results to return (1-10)",

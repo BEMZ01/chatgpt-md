@@ -14,6 +14,9 @@ import {
 } from "src/Constants";
 // DEFAULT_*_CONFIG imports removed - using getDefaultModelForService instead
 import { getAiApiUrls } from "./CommandUtilities";
+import { DetectedImage } from "src/Models/Tool";
+import { ImageApprovalModal } from "src/Views/ImageApprovalModal";
+import { findImageEmbedsInMessage } from "src/Utilities/MessageHelpers";
 
 /**
  * Handler for the main chat command
@@ -65,6 +68,9 @@ export class ChatHandler {
       if (!settings.generateAtCursor) {
         editorService.moveCursorToEnd(editor);
       }
+
+      // Detect and handle image embeds in user messages
+      await this.processImageAttachments(messagesWithRoleAndMessage, frontmatter.model);
 
       if (Platform.isMobile) {
         new Notice(`${PLUGIN_PREFIX} Calling ${frontmatter.model}`);
@@ -129,6 +135,88 @@ export class ChatHandler {
     }
 
     this.updateStatusBar("");
+  }
+
+  /**
+   * Detect image embeds in user messages, show approval modal, and attach approved images
+   */
+  private async processImageAttachments(messagesWithRole: Message[], modelName: string): Promise<void> {
+    const { fileService } = this.services;
+
+    // Collect all image embeds from user messages
+    const detectedImages: DetectedImage[] = [];
+    for (let i = 0; i < messagesWithRole.length; i++) {
+      const msg = messagesWithRole[i];
+      if (msg.role !== "user") continue;
+
+      const embeds = findImageEmbedsInMessage(msg.content);
+      for (const embed of embeds) {
+        const resolved = await fileService.readImageFileAsUint8Array(embed.title);
+        if (resolved) {
+          detectedImages.push({
+            embedText: embed.embedText,
+            title: embed.title,
+            path: resolved.path,
+            messageIndex: i,
+          });
+        }
+      }
+    }
+
+    if (detectedImages.length === 0) {
+      return;
+    }
+
+    // Show approval modal
+    const modal = new ImageApprovalModal(this.services.app, detectedImages, modelName);
+    modal.open();
+    const decision = await modal.waitForResult();
+
+    const approvedSet = new Set(decision.approvedImages.map((img) => img.title));
+
+    // Process each detected image
+    for (const detected of detectedImages) {
+      const msg = messagesWithRole[detected.messageIndex];
+      const approved = approvedSet.has(detected.title);
+
+      if (approved) {
+        // Read image data and attach to message
+        const imageResult = await fileService.readImageFileAsUint8Array(detected.title);
+        if (imageResult) {
+          const mimeType = this.getMimeTypeForImage(detected.title);
+
+          if (!msg.images) {
+            msg.images = [];
+          }
+          msg.images.push({ data: imageResult.data, mimeType, name: detected.title });
+        }
+        // Remove the embed text from the message content (image is sent as attachment)
+        msg.content = msg.content.replace(detected.embedText, "").trim();
+      } else {
+        // Replace embed with a note that the image was not shared
+        msg.content = msg.content.replace(detected.embedText, `[Image not shared: ${detected.title}]`);
+      }
+    }
+  }
+
+  /**
+   * Get the correct MIME type for an image file based on its extension
+   */
+  private getMimeTypeForImage(filename: string): string {
+    const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+    const mimeTypes: Record<string, string> = {
+      png: "image/png",
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      gif: "image/gif",
+      webp: "image/webp",
+      bmp: "image/bmp",
+      svg: "image/svg+xml",
+      tiff: "image/tiff",
+      tif: "image/tiff",
+      avif: "image/avif",
+    };
+    return mimeTypes[ext] ?? "image/png";
   }
 
   /**

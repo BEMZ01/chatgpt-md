@@ -1,9 +1,24 @@
-import { HORIZONTAL_LINE_MD, MARKDOWN_LINKS_REGEX, WIKI_LINKS_REGEX } from "src/Constants";
+import {
+  HORIZONTAL_LINE_MD,
+  IMAGE_EMBED_MARKDOWN_REGEX,
+  IMAGE_EMBED_WIKI_REGEX,
+  IMAGE_EXTENSIONS,
+  MARKDOWN_LINKS_REGEX,
+  WIKI_LINKS_REGEX,
+} from "src/Constants";
 
 /**
  * Utility functions for message parsing and manipulation
  * These are simple, stateless functions that can be used anywhere
  */
+
+/**
+ * Determine whether a file path/title refers to an image based on its extension
+ */
+export function isImageFile(filePath: string): boolean {
+  const ext = filePath.split(".").pop()?.toLowerCase() ?? "";
+  return IMAGE_EXTENSIONS.includes(ext);
+}
 
 /**
  * Remove comments from message content
@@ -24,7 +39,7 @@ export function removeCommentBlocks(message: string): string {
 
 /**
  * Find all wiki links and markdown links in a message
- * Returns unique links with their titles, excluding http/https URLs
+ * Returns unique links with their titles, excluding http/https URLs and image embeds
  */
 export function findLinksInMessage(message: string): { link: string; title: string }[] {
   const regexes = [
@@ -50,7 +65,8 @@ export function findLinksInMessage(message: string): { link: string; title: stri
         linkTitle &&
         !seenTitles.has(linkTitle) &&
         !linkTitle.startsWith("http://") &&
-        !linkTitle.startsWith("https://")
+        !linkTitle.startsWith("https://") &&
+        !isImageFile(linkTitle)
       ) {
         links.push({ link: fullLink, title: linkTitle });
         seenTitles.add(linkTitle);
@@ -59,6 +75,51 @@ export function findLinksInMessage(message: string): { link: string; title: stri
   }
 
   return links;
+}
+
+/**
+ * Find all image embeds in a message (both ![[image.png]] and ![alt](image.png) syntax)
+ * Returns unique embeds with their embed text and resolved title
+ */
+export function findImageEmbedsInMessage(message: string): { embedText: string; title: string }[] {
+  const embeds: { embedText: string; title: string }[] = [];
+  const seenTitles = new Set<string>();
+
+  // Match ![[filename.ext]] style (Obsidian wiki image embeds)
+  for (const match of message.matchAll(IMAGE_EMBED_WIKI_REGEX)) {
+    const embedText = match[0];
+    let title = match[1];
+
+    // Handle display size suffix: ![[image.png|400]]
+    // The size parameter is an Obsidian display directive and is intentionally discarded.
+    if (title.includes("|")) {
+      title = title.split("|")[0].trim();
+    }
+
+    if (title && isImageFile(title) && !seenTitles.has(title)) {
+      embeds.push({ embedText, title });
+      seenTitles.add(title);
+    }
+  }
+
+  // Match ![alt](path.ext) style (Markdown image embeds)
+  for (const match of message.matchAll(IMAGE_EMBED_MARKDOWN_REGEX)) {
+    const embedText = match[0];
+    const title = match[2]; // path is in capture group 2
+
+    if (
+      title &&
+      isImageFile(title) &&
+      !seenTitles.has(title) &&
+      !title.startsWith("http://") &&
+      !title.startsWith("https://")
+    ) {
+      embeds.push({ embedText, title });
+      seenTitles.add(title);
+    }
+  }
+
+  return embeds;
 }
 
 /**
