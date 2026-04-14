@@ -99,7 +99,7 @@ export class WebSearchService {
           .replace(/\{\{search_term\}\}/g, encodeURIComponent(query))
           .replace(/\{\{limit\}\}/g, String(limit));
       } else {
-        // Default behaviour: append query params and use Authorization header
+        // Default behavior: append query params and use Authorization header
         url = `${apiUrl}?q=${encodeURIComponent(query)}&limit=${limit}`;
         if (apiKey) {
           headers["Authorization"] = `Bearer ${apiKey}`;

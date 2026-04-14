@@ -91,6 +91,7 @@ export function findImageEmbedsInMessage(message: string): { embedText: string; 
     let title = match[1];
 
     // Handle display size suffix: ![[image.png|400]]
+    // The size parameter is an Obsidian display directive and is intentionally discarded.
     if (title.includes("|")) {
       title = title.split("|")[0].trim();
     }

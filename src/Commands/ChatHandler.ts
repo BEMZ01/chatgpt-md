@@ -183,8 +183,7 @@ export class ChatHandler {
         // Read image data and attach to message
         const imageResult = await fileService.readImageFileAsUint8Array(detected.title);
         if (imageResult) {
-          const ext = detected.title.split(".").pop()?.toLowerCase() ?? "png";
-          const mimeType = ext === "jpg" || ext === "jpeg" ? "image/jpeg" : `image/${ext}`;
+          const mimeType = this.getMimeTypeForImage(detected.title);
 
           if (!msg.images) {
             msg.images = [];
@@ -198,6 +197,26 @@ export class ChatHandler {
         msg.content = msg.content.replace(detected.embedText, `[Image not shared: ${detected.title}]`);
       }
     }
+  }
+
+  /**
+   * Get the correct MIME type for an image file based on its extension
+   */
+  private getMimeTypeForImage(filename: string): string {
+    const ext = filename.split(".").pop()?.toLowerCase() ?? "";
+    const mimeTypes: Record<string, string> = {
+      png: "image/png",
+      jpg: "image/jpeg",
+      jpeg: "image/jpeg",
+      gif: "image/gif",
+      webp: "image/webp",
+      bmp: "image/bmp",
+      svg: "image/svg+xml",
+      tiff: "image/tiff",
+      tif: "image/tiff",
+      avif: "image/avif",
+    };
+    return mimeTypes[ext] ?? "image/png";
   }
 
   /**
